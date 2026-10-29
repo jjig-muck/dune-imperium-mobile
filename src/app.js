@@ -40,6 +40,9 @@ const e = (value) =>
 const F = Object.keys(FACTIONS),
   SAVE = "imperium-mobile-save-v1",
   SETTINGS = "imperium-mobile-settings-v1";
+let boardMode = window.matchMedia("(max-width: 800px)").matches
+  ? "large"
+  : "map";
 let game = null,
   screen = "home",
   tab = "board",
@@ -270,44 +273,218 @@ function resourceStrip(p) {
       "",
     )}<div class="resource supply">${icon("troops", 20)}<div><small>주둔 병력</small><strong>${p.garrison}</strong></div></div></div><span class="saved">${icon(storageError ? "info" : "check", 11)} ${storageError ? "저장 실패" : "이 기기에 저장됨"}</span></div>`;
 }
+function metric(type, value, label, cost = false) {
+  return `<span class="effect-token ${cost ? "cost-token" : "reward-token"}" data-resource="${type}">${icon(type, 22)}<strong>${e(value)}</strong><span>${e(label)}</span></span>`;
+}
+function effectTokens(effects, cost = false) {
+  const names = {
+    spice: ["spice", "스파이스"],
+    water: ["water", "물"],
+    solari: ["solari", "솔라리"],
+    troops: ["troops", "병력"],
+    draw: ["cards", "카드"],
+    intrigue: ["eye", "음모"],
+    persuasion: ["cards", "설득력"],
+    swords: ["swords", "검"],
+    vp: ["star", "승점"],
+    shipment: ["ship", "수송"],
+    research: ["research", "연구"],
+    beetle: ["research", "틀레이락스"],
+    specimen: ["troops", "표본"],
+    negotiators: ["agent", "협상가"],
+    dreads: ["ship", "드레드노트"],
+  };
+  return Object.entries(effects || {})
+    .map(([key, value]) => {
+      if (names[key])
+        return metric(names[key][0], value, names[key][1], cost);
+      if (key === "influence") {
+        const faction = typeof value === "object" ? value.faction : null;
+        return metric(
+          faction ? FACTIONS[faction].icon : "crown",
+          typeof value === "object" ? value.amount : value,
+          faction ? `${FACTIONS[faction].name} 영향력` : "세력 영향력",
+          cost,
+        );
+      }
+      if (key === "harvest") return metric("spice", value, "스파이스 수확");
+      if (key === "acquire") return metric("cards", 1, CARDS[value].name);
+      if (key === "agents") return metric("agent", value, "이번 라운드 요원");
+      if (key === "swordmaster") return metric("agent", "+1", "영구 요원");
+      if (key === "council") return metric("cards", "+2", "매 공개 설득력");
+      if (key === "tech")
+        return `<span class="effect-text">${icon("gear", 20)} 기술 구매${value ? ` · 스파이스 ${value} 할인` : ""}</span>`;
+      if (key === "negotiate")
+        return `<span class="effect-text">${icon("gear", 20)} 협상가 1 배치 / 스파이스 1 할인 구매</span>`;
+      if (key === "sell") return metric("solari", "6–12", "솔라리");
+      if (key === "breed")
+        return `<span class="effect-text">카드 1장 폐기 → ${icon("cards", 20)}<strong>2장</strong></span>`;
+      if (key === "stealIntrigue")
+        return '<span class="effect-text">음모 4장 이상인 상대에게서 1장 탈취</span>';
+      if (key === "control")
+        return `<span class="effect-text">${icon("city", 20)} ${e(spaceById[value].name)} 지배권</span>`;
+      if (key === "distinctInfluence")
+        return metric("crown", value, "서로 다른 세력 영향력");
+      if (key === "optional" || key === "optional2")
+        return `<span class="optional-reward">${effectTokens(value.cost, true)}<span class="exchange-arrow">→</span>${effectTokens(value.gain)}<small>선택</small></span>`;
+      return `<span class="effect-text">${e(describe({ [key]: value }))}</span>`;
+    })
+    .join("");
+}
+function locationRewards(space, player) {
+  if (space.id === "research" && game.options.immortality)
+    return { draw: 2, research: 1 };
+  const rewards = { ...space.effect };
+  if (space.maker) {
+    rewards.harvest += game.bonus[space.id] || 0;
+    if (selected.some((index) => player.hand[index] === "carryall"))
+      rewards.harvest += space.effect.harvest;
+    if (player.leader === "ariana") {
+      rewards.harvest--;
+      rewards.draw = 1;
+    }
+  }
+  return rewards;
+}
+function locationCosts(space, player) {
+  const costs = spaceCost(
+    player,
+    space,
+    selected.map((index) => player.hand[index]),
+  );
+  return space.id === "sell" ? { spice: "2–5" } : costs;
+}
+function location(space) {
+  const player = viewPlayer(),
+    reason = legalReason(game, player, space, selected);
+  const legal =
+    game.phase === "agent" &&
+    isHumanTurn() &&
+    !pending(game) &&
+    selected.length &&
+    !reason;
+  const occupants = game.occupied[space.id] || [],
+    costs = locationCosts(space, player),
+    rewards = locationRewards(space, player);
+  const controller =
+    game.dreadControl[space.id]?.player ?? game.control[space.id];
+  return `<button class="location ${legal ? "legal" : ""} ${occupants.length ? "occupied" : ""}" data-action="space" data-id="${space.id}" style="--faction:${FACTIONS[space.icon]?.color || "#b8c7ad"}" aria-label="${e(space.name)}. 비용: ${e(describe(costs) || "없음")}. 보상: ${e(describe(rewards))}. ${e(reason)}">
+    <span class="location-heading">${factionIcon(space.icon, 22)}<strong>${space.name}</strong>${space.combat ? `<span class="combat-space-tag">${icon("swords", 18)} 전투</span>` : ""}</span>
+    <span class="location-cost"><span class="effect-label">비용</span><span class="effect-tokens">${Object.keys(costs).length ? effectTokens(costs, true) : '<span class="no-cost">없음</span>'}</span></span>
+    ${space.requires ? `<span class="location-requirement">조건 · ${FACTIONS[space.requires.faction].name} 영향력 ${space.requires.amount} 이상 <span>${player.influence[space.requires.faction] >= space.requires.amount ? "충족" : "미충족"}</span></span>` : ""}
+    <span class="location-reward"><span class="effect-label">보상</span><span class="effect-tokens">${effectTokens(rewards)}</span></span>
+    ${space.maker ? `<span class="location-note">기본 ${space.effect.harvest}${game.bonus[space.id] ? ` + 축적 ${game.bonus[space.id]}` : ""}${player.leader === "ariana" ? " · 아리아나 수확 −1 / 카드 +1" : ""}</span>` : ""}
+    ${space.id === "sell" ? '<span class="location-note">스파이스 2→6 · 3→8 · 4→10 · 5→12 솔라리</span>' : ""}
+    ${controller != null ? `<span class="location-note">지배자 · ${e(game.players[controller].name)}${game.dreadControl[space.id] ? " (드레드노트)" : ""}</span>` : ""}
+    <span class="location-occupancy">${occupants.length ? occupants.map((id) => `<span style="color:${game.players[id].color}">${icon("agent", 17)} ${e(game.players[id].name)}</span>`).join("") : `${icon("agent", 17)} ${legal ? "배치 가능" : "빈 장소"}`}</span>
+  </button>`;
+}
+function combatSummary() {
+  const c = conflict(game),
+    player = viewPlayer();
+  return `<button class="combat-launch" data-action="tab" data-tab="combat" aria-label="이번 분쟁 ${c.name}. 분쟁 지역과 전투 현황 보기"><span class="combat-launch-icon">${icon("swords", 24)}</span><span><small>이번 분쟁 · ${"ⅠⅡⅢ"[c.level - 1]}단계</small><strong>${c.name}</strong></span><span class="combat-launch-strength"><small>내 전투력</small><strong>${strength(player)}</strong></span><span class="combat-launch-link">전투 보기 ${icon("chevron", 16)}</span></button>`;
+}
 function battle() {
-  const c = conflict(game);
-  return `<div class="battlefield"><div class="battle-info"><span class="eyebrow">CONFLICT ${"I".repeat(c.level)} / ROUND ${String(game.round).padStart(2, "0")}</span><h2>${c.name}</h2><div class="rewards">${c.rewards
-    .slice(0, game.players.length === 4 ? 3 : 2)
-    .map(
-      (r, i) =>
-        `<div class="reward"><span class="rank">${i + 1}</span>${e(describe(r))}</div>`,
-    )
-    .join(
-      "",
-    )}</div></div><div class="forces">${game.players.map((p) => `<div class="force" style="color:${p.color}"><div><span class="units">${Array(Math.min(8, p.troops)).fill('<i class="unit"></i>').join("")}</span><strong>${strength(p)}</strong></div><small>${e(p.name)}<br>${p.troops} 병력${p.dreadCombat ? ` · 함선 ${p.dreadCombat}` : ""}</small></div>`).join("")}</div></div>`;
+  const c = conflict(game),
+    settled = ["roundEnd", "ended"].includes(game.phase);
+  const active = game.phase === "combat",
+    canAct = active && isHumanTurn() && !pending(game);
+  const phaseText = settled
+    ? "전투 정산 완료"
+    : active
+      ? "전투 음모 단계"
+      : "병력 배치 중";
+  return `<section class="battle-panel" aria-label="분쟁 카드와 전투 현황">
+    ${active ? `<div class="combat-actions"><p>${e(game.players[activeId()].name)}의 ${pending(game) ? "선택" : "전투 음모"} 차례입니다. 모두 연속 통과하면 전투가 정산됩니다.</p><div><button class="secondary" data-action="intrigues">${icon("eye", 18)} 내 음모 확인</button>${canAct ? '<button class="primary" data-action="passCombat">전투 통과 →</button>' : game.players[activeId()].ai ? `<button class="secondary" data-action="pause">${paused ? "AI 계속하기" : "AI 일시 정지"}</button>` : ""}</div></div>` : !settled ? '<p class="battle-rule">전투 장소에 요원을 보내면 이번 턴 모집 유닛과 기존 주둔 유닛 최대 2개를 이곳에 배치할 수 있습니다.</p>' : ""}
+    <section class="conflict-card"><div class="conflict-heading"><span class="pill">분쟁 ${"ⅠⅡⅢ"[c.level - 1]} · ${game.round}라운드</span><span class="battle-phase">${phaseText}</span></div><h2>${c.name}</h2>${c.location ? `<p class="conflict-location">${icon("city", 19)} 승리 시 ${spaceById[c.location].name} 지배권 획득</p>` : ""}<h3>순위별 보상</h3><div class="conflict-rewards">${c.rewards
+      .slice(0, game.players.length === 4 ? 3 : 2)
+      .map(
+        (reward, index) =>
+          `<div class="conflict-reward"><strong class="reward-place">${index + 1}위</strong><div class="effect-tokens">${effectTokens(reward)}</div></div>`,
+      )
+      .join(
+        "",
+      )}</div><p class="battle-rule">동률이면 한 단계 낮은 보상 · 병력과 드레드노트가 없으면 보상 없음</p></section>
+    <section class="combat-arena" aria-label="분쟁 지역"><header><h3>${icon("swords", 23)} 분쟁 지역</h3><span>${settled ? "투입 병력 회수됨" : "이곳에 투입한 유닛만 전투에 참가"}</span></header><div class="arena-players">${game.players
+      .map(
+        (player) =>
+          `<section class="arena-player" style="--player-color:${player.color}"><div class="arena-player-heading"><strong>${e(player.name)}</strong><span><b>${strength(player)}</b> 전투력</span></div><div class="arena-units" aria-label="${e(player.name)} 투입 병력 ${player.troops}개, 드레드노트 ${player.dreadCombat}개">${
+            player.troops + player.dreadCombat
+              ? `${Array(player.troops).fill('<i class="troop-cube"></i>').join("")}${Array(
+                  player.dreadCombat,
+                )
+                  .fill(`<i class="dread-unit">${icon("ship", 22)}</i>`)
+                  .join("")}`
+              : '<span class="arena-empty">투입 유닛 없음</span>'
+          }</div><div class="combat-counts"><span>${icon("troops", 18)} 병력 <b>${player.troops}</b></span>${game.options.ix ? `<span>${icon("ship", 18)} 함선 <b>${player.dreadCombat}</b></span>` : ""}<span>${icon("swords", 18)} 검 <b>${player.swords}</b></span></div><p class="combat-formula">${player.troops}×2${game.options.ix ? ` + ${player.dreadCombat}×${player.leader === "rhombur" ? 4 : 3}` : ""} + 검 ${player.swords}${player.troops + player.dreadCombat ? ` = ${strength(player)}` : " → 유닛이 없어 0"}</p><div class="garrison-count">${icon("troops", 18)} 주둔지 병력 <strong>${player.garrison}</strong>${game.options.ix ? `<span>함선 <strong>${player.dreadGarrison}</strong></span>` : ""}</div></section>`,
+      )
+      .join("")}</div></section>
+  </section>`;
 }
 function board() {
-  const p = viewPlayer(),
-    can = game.phase === "agent" && isHumanTurn() && !pending(game);
-  const spaces = activeSpaces(game.options);
-  const groups = [...new Set(spaces.map((s) => s.group))];
-  return `${battle()}${groups
-    .map(
-      (group) =>
-        `<section><div class="group-heading"><h3>${group}</h3><span>${group === "세력" ? "우호 2 → 승점 · 동맹 4 → 추가 승점" : group === "사막" ? "미방문 시 스파이스 축적" : "장소당 요원 1개"}</span></div><div class="locations">${spaces
-          .filter((x) => x.group === group)
-          .map((s) => {
-            const reason = legalReason(game, p, s, selected),
-              legal = can && selected.length && !reason,
-              occ = game.occupied[s.id] || [];
-            return `<button class="location ${legal ? "legal" : ""} ${occ.length && !legal ? "blocked" : ""}" style="--faction:${FACTIONS[s.icon]?.color || "#bdc2a7"}" data-action="space" data-id="${s.id}" aria-label="${s.name}${reason ? " · " + reason : ""}"><span class="loc-top">${factionIcon(s.icon, 17)}<span class="loc-cost">${Object.entries(
-              spaceCost(p, s),
+  const spaces = activeSpaces(game.options),
+    player = viewPlayer();
+  const locations = (ids) =>
+    ids
+      .filter((id) => spaces.some((space) => space.id === id))
+      .map((id) => location(spaceById[id]))
+      .join("");
+  const factionSpaces = {
+    emperor: ["conspire", "wealth"],
+    guild: ["heighliner", "foldspace"],
+    bene: ["breeding", "secrets"],
+    fremen: ["warriors", "stillsuits"],
+  };
+  const factionZones = F.map(
+    (faction) =>
+      `<section class="board-zone faction-zone" style="--zone-color:${FACTIONS[faction].color}"><header class="board-zone-heading"><h3>${factionIcon(faction, 23)} ${FACTIONS[faction].name}</h3><span>내 영향력 <b>${player.influence[faction]}</b></span></header><div class="board-influence" aria-label="${FACTIONS[faction].name} 영향력 트랙">${Array.from(
+        { length: 7 },
+        (_, n) =>
+          `<span class="influence-stop ${[2, 4].includes(n) ? "influence-milestone" : ""}"><small>${n}${[2, 4].includes(n) ? " VP" : ""}</small><span>${game.players
+            .filter((p) => p.influence[faction] === n)
+            .map(
+              (p) =>
+                `<i style="background:${p.color}" title="${e(p.name)}"></i>`,
             )
-              .map(([k, n]) => `${icon(k, 11)} ${n}`)
-              .join(
-                " ",
-              )} ${s.combat ? `<span class="combat-icon" title="전장 배치 가능">${icon("swords", 12)}</span>` : ""}</span></span><span class="loc-name">${s.name}</span><span class="loc-effect">${e(describe(s.id === "research" && game.options.immortality ? { draw: 2, research: 1 } : s.effect))}</span>${s.maker && game.bonus[s.id] ? `<span class="maker">${icon("spice", 10)} 축적 +${game.bonus[s.id]}</span>` : ""}<span class="meeples">${occ.map((id) => `<i class="meeple" style="background:${game.players[id].color}" title="${e(game.players[id].name)}"></i>`).join("")}</span></button>`;
-          })
-          .join("")}</div></section>`,
-    )
-    .join("")}`;
+            .join("")}</span></span>`,
+      ).join(
+        "",
+      )}</div><div class="zone-locations">${locations(factionSpaces[faction])}</div></section>`,
+  ).join("");
+  return `<div class="board-view-controls"><div><h2>아라키스 보드</h2><p>${boardMode === "map" ? "실물판 구역 배치 · 좌우로 넘겨 이동할 수 있습니다." : "구역별 확대 · 장소의 비용과 보상을 크게 확인하세요."}</p></div><div class="segments" aria-label="보드 보기 방식"><button data-action="boardMode" data-mode="map" class="${boardMode === "map" ? "active" : ""}" aria-pressed="${boardMode === "map"}">실물 배치</button><button data-action="boardMode" data-mode="large" class="${boardMode === "large" ? "active" : ""}" aria-pressed="${boardMode === "large"}">모바일 확대</button></div></div>
+    <nav class="board-jumps" aria-label="보드 구역 이동">${[
+      ["factions", "세력"],
+      ["landsraad", "의회"],
+      ["choam", "CHOAM"],
+      ["arrakis", "아라키스"],
+      ["battle", "전장"],
+    ]
+      .map(
+        ([zone, label]) =>
+          `<button data-action="jumpZone" data-zone="${zone}">${label}</button>`,
+      )
+      .join("")}</nav>
+    <div class="board-viewport view-${boardMode}"><div class="board-layout"><aside class="board-factions" id="zone-factions" aria-label="실물판 왼쪽 세력 구역">${factionZones}</aside>
+    <section class="board-zone landsraad-zone" id="zone-landsraad"><header class="board-zone-heading"><h3>${icon("landsraad", 23)} 란츠라트 의회</h3></header><div class="zone-locations">${locations(["council", "oratory", "mentat", "rally", "swordmaster"])}</div></section>
+    <section class="board-zone choam-zone" id="zone-choam"><header class="board-zone-heading"><h3>${icon("spiceTrade", 23)} CHOAM</h3><span>${game.options.ix ? "익스 확장" : "스파이스 무역"}</span></header><div class="zone-locations">${locations(game.options.ix ? ["shipping", "smuggling"] : ["sell", "contract"])}</div>${game.options.ix ? `<p class="shipping-note">내 수송선 <b>${player.shipping}/3</b> · 귀환 시 아래 단계 보상까지 획득</p>` : ""}</section>
+    <section class="board-zone arrakis-zone" id="zone-arrakis"><header class="board-zone-heading"><h3>${icon("city", 23)} 아라키스</h3><span>도시 · 사막</span></header><div class="zone-locations">${locations(["arrakeen", "carthag", "research", "basin", "sietch", "hagga", "flat"])}</div></section>
+    <section class="board-battle" id="zone-battle"><div class="board-zone-heading"><h3>${icon("swords", 23)} 분쟁 · 전투</h3><button class="text-button" data-action="tab" data-tab="combat">전투 화면 열기 →</button></div>${battle()}</section></div></div>
+    ${game.options.ix ? `<section class="board-zone ix-sideboard"><header class="board-zone-heading"><h3>${icon("gear", 23)} 익스 보드</h3><button class="text-button" data-action="tab" data-tab="empire">기술 타일 보기 →</button></header><div class="zone-locations">${locations(["negotiation", "dreadnought"])}</div></section>` : ""}`;
 }
+function turnBar(player) {
+  const human = isHumanTurn(),
+    busy = pending(game);
+  const selectedText = selected
+    .map((index) => CARDS[player.hand[index]]?.name)
+    .filter(Boolean)
+    .join(" + ");
+  const revealing = game.phase === "reveal" && game.current === player.id;
+  const cardLabel = revealing
+    ? `공개 카드 ${player.revealed.length}장`
+    : `손패 ${player.hand.length}장`;
+  return `<section class="turnbar ${tab === "board" ? "board-turnbar" : ""}" aria-label="손패와 현재 차례"><div class="mobile-turn-info"><span>${human ? "나의 차례" : `${e(game.players[activeId()].name)}의 차례`}</span><strong>${game.phase === "reveal" && game.current === player.id ? `설득력 ${player.persuasion}` : `남은 요원 ${player.agents}`}</strong></div><div class="mobile-turn-actions"><button class="secondary" data-action="hand">${icon("cards", 19)} ${selected.length ? `${selected.length}장 선택` : cardLabel}</button>${human && !busy && game.phase === "agent" ? '<button class="primary" data-action="reveal">공개</button>' : human && !busy && game.phase === "reveal" ? '<button class="primary" data-action="endReveal">구매 완료</button>' : !human ? `<button class="secondary" data-action="pause">${paused ? "AI 계속" : "일시 정지"}</button>` : ""}<button class="icon-btn" data-action="intrigues" aria-label="음모 카드 보기">${icon("eye", 20)}</button></div>${selectedText ? `<p class="selected-card-summary">${e(selectedText)} · 금빛 장소에 배치 가능</p>` : ""}</section>`;
+}
+
 function market() {
   const p = viewPlayer(),
     buy = game.phase === "reveal" && isHumanTurn() && !pending(game);
@@ -378,8 +555,9 @@ function logView() {
 }
 function statusBanner() {
   if (!["roundEnd", "ended", "combat"].includes(game.phase)) return "";
+  if (game.phase === "combat" && tab === "combat") return "";
   if (game.phase === "combat")
-    return `<div class="status-banner"><span class="eyebrow">COMBAT / INTRIGUE WINDOW</span><h2>마지막 한 수가 남았습니다.</h2><p>병력이 있는 플레이어가 순서대로 전투 음모를 사용합니다.<br>모두 연속으로 통과하면 전투가 정산됩니다.</p><div class="row wrap"><button class="secondary" data-action="intrigues">음모 카드 확인 ${icon("eye", 14)}</button>${isHumanTurn() && !pending(game) ? '<button class="primary" data-action="passCombat">전투 통과 →</button>' : ""}</div></div>`;
+    return `<div class="status-banner"><span class="eyebrow">COMBAT / INTRIGUE WINDOW</span><h2>전투 음모 단계</h2><p>병력이 있는 플레이어가 순서대로 전투 음모를 사용합니다.<br>모두 연속으로 통과하면 전투가 정산됩니다.</p><div class="row wrap"><button class="secondary" data-action="intrigues">음모 카드 확인 ${icon("eye", 14)}</button>${isHumanTurn() && !pending(game) ? '<button class="primary" data-action="passCombat">전투 통과 →</button>' : ""}</div></div>`;
   if (game.phase === "ended") {
     const win = game.winners.includes(0),
       solo = game.options.mode === "solo";
@@ -395,7 +573,7 @@ function statusBanner() {
         "",
       )}</div><div class="row wrap"><button class="primary" data-action="home">새로운 원정 준비 ${icon("arrow", 16)}</button><button class="secondary" data-action="export">기록 저장 ${icon("download", 15)}</button></div></div>`;
   }
-  return `<div class="status-banner"><span class="eyebrow">ROUND ${game.round} / RESOLUTION</span><h2>전투의 먼지가 가라앉습니다.</h2><div class="results">${game.roundResults.map((r) => `<div class="result-line"><span style="color:${game.players[r.player].color}">${e(game.players[r.player].name)} · 전투력 ${r.strength}</span><span>${r.rank <= (game.players.length === 4 ? 3 : 2) ? `${r.tied ? "공동 " : ""}${r.rank}위 보상` : "보상 없음"}</span></div>`).join("")}</div><button class="primary" data-action="nextRound">다음 라운드 ${icon("arrow", 17)}</button></div>`;
+  return `<div class="status-banner"><span class="eyebrow">ROUND ${game.round} / RESOLUTION</span><h2>이번 라운드 전투 결과</h2><div class="results">${game.roundResults.map((r) => `<div class="result-line"><span style="color:${game.players[r.player].color}">${e(game.players[r.player].name)} · 전투력 ${r.strength}</span><span>${r.rank <= (game.players.length === 4 ? 3 : 2) ? `${r.tied ? "공동 " : ""}${r.rank}위 보상` : "보상 없음"}</span></div>`).join("")}</div><button class="primary" data-action="nextRound" ${pending(game) ? "disabled" : ""}>${pending(game) ? "보상 선택 중" : "다음 라운드"} ${icon("arrow", 17)}</button></div>`;
 }
 function turnPanel(p) {
   const isAi = game.players[activeId()].ai,
@@ -421,32 +599,21 @@ function turnPanel(p) {
   return `<aside class="turn-panel"><div class="turn-head"><span class="eyebrow">${isAi ? '<i class="thinking"></i>' : ""}${phase === "agent" ? "AGENT TURN" : phase === "reveal" ? "REVEAL TURN" : phase === "combat" ? "COMBAT PHASE" : "IMPERIUM"} ${isAi ? `<button class="ai-toggle" data-action="fast">${fast ? "2×" : "1×"}</button>` : ""}</span><h2>${title}</h2><p>${isAi ? (paused ? "AI 진행이 일시 정지되었습니다." : "상대의 전략을 읽어보세요.") : phase === "reveal" ? `설득력 ${p.persuasion} · 시장에서 카드 구매 가능` : phase === "agent" ? (selected.length ? "금빛 테두리의 장소에 파견할 수 있습니다." : "카드를 선택하면 가능한 장소가 표시됩니다.") : phase === "combat" ? "음모를 쓰거나 전투를 통과하세요." : "전략은 기록되고, 제국은 계속됩니다."}</p>${aiError ? `<p class="ai-error">${e(aiError)}</p>` : ""}</div><div class="hand-panel"><div class="hand-heading"><span>${phase === "reveal" ? "공개한 카드" : "나의 손패"} · ${phase === "reveal" ? p.revealed.length : p.hand.length}장</span><button class="text-button" style="padding:0;font-size:9px" data-action="deck">덱 ${p.deck.length} / 버림 ${p.discard.length}</button></div><div class="hand-cards">${(phase === "reveal" ? p.revealed : p.hand).map((id, index) => card(id, { index, context: phase === "reveal" ? "inspect" : "hand", selected: selected.includes(index) })).join("") || '<div class="empty">손패가 없습니다.</div>'}</div></div><div class="turn-actions">${phase === "agent" && human && !busy ? `<button class="primary" data-action="reveal">손패 공개 ${icon("arrow", 14)}</button>` : ""}${phase === "reveal" && human && !busy ? `<button class="primary" data-action="tab" data-tab="market">시장 둘러보기 ${icon("cards", 14)}</button><button class="secondary" data-action="endReveal">구매 완료 · 턴 종료 ${icon("check", 13)}</button>` : ""}${phase === "combat" && human && !busy ? '<button class="primary" data-action="passCombat">전투 통과 →</button>' : ""}${isAi ? `<button class="secondary" data-action="pause">${icon(paused ? "play" : "pause", 12)} ${paused ? "AI 계속하기" : "AI 일시 정지"}</button>` : ""}${!["ended", "roundEnd"].includes(phase) ? `<button class="secondary" data-action="intrigues">${icon("eye", 13)} 음모 ${p.intrigues.length}장</button>` : ""}${p.leader === "paul" && !isAi ? `<button class="text-button" data-action="peek">예지 · 덱 위 확인</button>` : ""}${game.options.immortality && p.atomics && human && ["agent", "reveal"].includes(phase) && !busy ? `<button class="text-button" data-action="atomics">가문 원자탄 · 제국 열 교체</button>` : ""}<span class="hand-hint">${p.agents} 요원 · 주둔 병력 ${p.garrison} · 공급처 ${troopSupply(p)}</span></div></aside>`;
 }
 function gamePage() {
-  const p = viewPlayer();
-  return `<div class="game-shell"><header class="game-nav"><button data-action="home" style="border:0;padding:0" aria-label="시작 화면">${wordmark()}</button><div><div class="round-label">ROUND ${String(game.round).padStart(2, "0")} <span class="muted">/ 10</span> <span class="badge">${game.options.target} VP</span></div><div class="round-dots">${Array.from({ length: 10 }, (_, i) => `<i class="${i < game.round ? "done" : ""}"></i>`).join("")}</div></div><div class="game-nav-actions"><button class="icon-btn" data-action="undo" aria-label="내 이전 결정 되돌리기" ${!undo ? "disabled" : ""}>${icon("undo", 17)}</button><button class="icon-btn" data-action="sound" aria-label="${sound ? "소리 끄기" : "소리 켜기"}">${icon(sound ? "sound" : "mute", 17)}</button><button class="icon-btn" data-action="settings" aria-label="게임 설정과 저장">${icon("menu", 19)}</button></div></header>${playerRow()}${resourceStrip(p)}${storageError ? `<div class="notice">${e(storageError)}</div>` : ""}<div class="game-layout"><main class="board-main"><nav class="tabs" aria-label="게임 화면">${[
-    ["board", "board", "보드"],
-    ["market", "cards", "시장"],
-    ["empire", "crown", "제국"],
-    ["log", "log", "기록"],
-  ]
-    .map(
-      ([id, ico, name]) =>
-        `<button class="${tab === id ? "active" : ""}" data-action="tab" data-tab="${id}" aria-current="${tab === id ? "page" : "false"}">${icon(ico, 16)} ${name}${id === "market" && game.phase === "reveal" ? `<span>${p.persuasion}</span>` : ""}</button>`,
-    )
-    .join(
-      "",
-    )}</nav>${statusBanner()}${tab === "board" ? board() : tab === "market" ? market() : tab === "empire" ? empire() : logView()}<div class="game-fineprint">비공식 팬 에디션 · 선별 카드 · ${game.options.ix ? "익스 ON" : "기본판"} ${game.options.immortality ? "· 불멸 ON" : ""} · <button class="text-button" style="font-size:inherit;padding:0" data-action="scope">구현 범위</button></div></main>${turnPanel(p)}</div><nav class="mobile-bottom" aria-label="빠른 이동">${[
-    ["board", "board", "보드"],
-    ["market", "cards", "시장"],
-    ["empire", "crown", "제국"],
-    ["log", "log", "기록"],
-  ]
-    .map(
-      ([id, ico, name]) =>
-        `<button class="${tab === id ? "active" : ""}" data-action="mobileTab" data-tab="${id}">${icon(ico)}${name}</button>`,
-    )
-    .join(
-      "",
-    )}<button data-action="intrigues">${icon("eye")}음모</button></nav></div>`;
+  const p = viewPlayer(),
+    navigation = [
+      ["board", "board", "보드"],
+      ["combat", "swords", "전투"],
+      ["market", "cards", "시장"],
+      ["empire", "crown", "제국"],
+      ["log", "log", "기록"],
+    ];
+  const wide = ["board", "combat"].includes(tab);
+  return `<div class="game-shell"><header class="game-nav"><button data-action="home" style="border:0;padding:0" aria-label="시작 화면">${wordmark()}</button><div><div class="round-label">ROUND ${String(game.round).padStart(2, "0")} <span class="muted">/ 10</span> <span class="badge">${game.options.target} VP</span></div><div class="round-dots">${Array.from({ length: 10 }, (_, i) => `<i class="${i < game.round ? "done" : ""}"></i>`).join("")}</div></div><div class="game-nav-actions"><button class="icon-btn" data-action="undo" aria-label="내 이전 결정 되돌리기" ${!undo ? "disabled" : ""}>${icon("undo", 17)}</button><button class="icon-btn" data-action="sound" aria-label="${sound ? "소리 끄기" : "소리 켜기"}">${icon(sound ? "sound" : "mute", 17)}</button><button class="icon-btn" data-action="settings" aria-label="게임 설정과 저장">${icon("menu", 19)}</button></div></header>${playerRow()}${resourceStrip(p)}${combatSummary()}${storageError ? `<div class="notice">${e(storageError)}</div>` : ""}
+  <nav class="tabs game-tabs" aria-label="게임 화면">${navigation.map(([id, ico, name]) => `<button class="${tab === id ? "active" : ""}" data-action="tab" data-tab="${id}" aria-current="${tab === id ? "page" : "false"}">${icon(ico, 18)} ${name}${id === "market" && game.phase === "reveal" ? `<span>${p.persuasion}</span>` : ""}</button>`).join("")}</nav>
+  ${aiError ? `<p class="notice ai-error" role="alert">${e(aiError)}</p>` : ""}
+  ${tab !== "combat" && !["combat", "roundEnd", "ended"].includes(game.phase) ? turnBar(p) : ""}
+  <div class="game-layout ${wide ? "wide-view" : ""}"><main class="board-main">${statusBanner()}${tab === "board" ? board() : tab === "combat" ? battle() : tab === "market" ? market() : tab === "empire" ? empire() : logView()}<div class="game-fineprint">비공식 팬 에디션 · 선별 카드 · ${game.options.ix ? "익스 ON" : "기본판"} ${game.options.immortality ? "· 불멸 ON" : ""} · <button class="text-button" style="font-size:inherit;padding:0" data-action="scope">구현 범위</button></div></main>${wide ? "" : turnPanel(p)}</div>
+  <nav class="mobile-bottom" aria-label="빠른 이동">${navigation.map(([id, ico, name]) => `<button class="${tab === id ? "active" : ""}" data-action="mobileTab" data-tab="${id}">${icon(ico)}${name}</button>`).join("")}</nav></div>`;
 }
 
 function modalFrame(content, { wide = false, close = true } = {}) {
@@ -487,6 +654,17 @@ function overlays() {
     return decisionModal(d);
   if (!modal) return "";
   const p = game ? viewPlayer() : null;
+  if (modal.kind === "hand") {
+    const revealing = game.phase === "reveal" && game.current === p.id;
+    const ids = revealing ? p.revealed : p.hand;
+    const selectable =
+      isHumanTurn() && game.phase === "agent" && !pending(game);
+    const tools = `<div class="hand-tools"><button class="secondary" data-action="deck">${icon("cards", 16)} 나의 덱 · ${p.deck.length} / 버림 ${p.discard.length}</button>${p.leader === "paul" && isHumanTurn() ? '<button class="secondary" data-action="peek">예지 · 덱 위 확인</button>' : ""}${game.options.immortality && p.atomics && isHumanTurn() && ["agent", "reveal"].includes(game.phase) && !pending(game) ? '<button class="secondary" data-action="atomics">가문 원자탄 · 제국 열 교체</button>' : ""}</div><p class="hand-supply">주둔 병력 ${p.garrison} · 공급처 ${troopSupply(p)}</p>`;
+    return modalFrame(
+      `<span class="eyebrow">${revealing ? "공개한 카드" : "나의 손패"}</span><h2>${selectable ? "파견할 카드를 선택하세요." : "카드 확인"}</h2><p>${selectable ? "카드 아이콘과 일치하는 장소에 요원을 보낼 수 있습니다. 접합 카드는 다른 한 장과 함께 선택하세요." : "카드를 눌러 전체 효과를 확인할 수 있습니다."}</p>${tools}<div class="hand-modal-cards">${ids.map((id, index) => card(id, { index, context: selectable ? "hand" : "inspect", selected: selected.includes(index) })).join("") || '<p class="empty">손패가 없습니다.</p>'}</div><div class="modal-actions"><button class="secondary" data-action="close">닫기</button>${selectable ? `<button class="primary" data-action="finishHand" ${selected.length ? "" : "disabled"}>${selected.length}장 선택 · 장소 보기 →</button>` : ""}</div>`,
+      { wide: true },
+    );
+  }
   if (modal.kind === "scope")
     return modalFrame(
       `<span class="eyebrow">TRANSPARENCY / BUILD 0.1</span><h2>이 에디션에 대하여</h2><p>${COVERAGE.description}</p><ul class="scope-list">${COVERAGE.details.map((t) => `<li>${e(t)}</li>`).join("")}</ul><div class="notice">현재 제국 카드 ${Object.values(CARDS).filter((c) => !c.starter && !c.reserve && !c.tleilaxu).length}종 · 틀레이락스 ${Object.values(CARDS).filter((c) => c.tleilaxu).length}종 · 음모 10종 · 익스 기술 18종.<br>원본 게임을 소유한 플레이어를 위한 비공식 팬 프로젝트입니다.</div><div class="divider"></div><div class="source-links"><a href="https://www.direwolfdigital.com/dune-imperium/resources/" target="_blank" rel="noopener noreferrer">공식 규칙 자료 ↗</a><a href="https://github.com/jjig-muck/dune-imperium-mobile" target="_blank" rel="noopener noreferrer">GitHub 소스 ↗</a></div>`,
@@ -523,13 +701,10 @@ function overlays() {
   if (modal.kind === "space") {
     const space = spaceById[modal.id],
       reason = legalReason(game, p, space, selected),
-      cost = spaceCost(
-        p,
-        space,
-        selected.map((i) => p.hand[i]),
-      );
+      costs = locationCosts(space, p),
+      rewards = locationRewards(space, p);
     return modalFrame(
-      `<span class="eyebrow">${ICON_NAMES[space.icon]} / ${space.combat ? "COMBAT SPACE" : "AGENT SPACE"}</span><h2>${factionIcon(space.icon, 23)} ${space.name}</h2><p>${e(describe(space.id === "research" && game.options.immortality ? { draw: 2, research: 1 } : space.effect))}</p>${space.cost ? `<div class="notice">비용 · ${describe(cost)}</div>` : ""}${space.requires ? `<p class="small">조건 · ${FACTIONS[space.requires.faction].name} 영향력 ${space.requires.amount}</p>` : ""}${selected.length ? `<p class="gold small">${selected.map((i) => e(CARDS[p.hand[i]].name)).join(" + ")} 사용</p>` : ""}${reason ? `<p>${e(reason)}</p>` : "<p>이 장소에 요원을 파견합니다. 파견 후 카드 효과와 전장 배치를 선택합니다.</p>"}<div class="modal-actions"><button class="secondary" data-action="close">돌아가기</button><button class="primary" data-action="confirmAgent" data-id="${space.id}" ${reason ? "disabled" : ""}>파견 확정 ${icon("arrow", 15)}</button></div>`,
+      `<span class="eyebrow">${ICON_NAMES[space.icon]} · ${space.combat ? "전투 장소" : "요원 장소"}</span><h2>${factionIcon(space.icon, 25)} ${space.name}</h2><div class="space-detail"><h3>배치 비용</h3><div class="effect-tokens">${Object.keys(costs).length ? effectTokens(costs, true) : '<span class="no-cost">비용 없음</span>'}</div>${space.requires ? `<p class="location-requirement">${FACTIONS[space.requires.faction].name} 영향력 ${space.requires.amount} 이상 필요 · 현재 ${p.influence[space.requires.faction]}</p>` : ""}<h3>방문 보상</h3><div class="effect-tokens">${effectTokens(rewards)}</div>${space.combat ? '<p class="combat-detail-note">전장 배치 가능 · 이번 턴 모집 유닛 + 기존 주둔 유닛 최대 2개</p>' : ""}</div>${selected.length ? `<p class="gold">사용 카드 · ${selected.map((i) => e(CARDS[p.hand[i]].name)).join(" + ")}</p>` : ""}${reason ? `<p class="location-reason">${e(reason)}</p>` : "<p>요원을 파견하면 장소와 카드의 효과를 모두 얻습니다.</p>"}<div class="modal-actions"><button class="secondary" data-action="close">돌아가기</button><button class="primary" data-action="confirmAgent" data-id="${space.id}" ${reason ? "disabled" : ""}>파견 확정 ${icon("arrow", 17)}</button></div>`,
     );
   }
   if (modal.kind === "purchase" || modal.kind === "inspectCard") {
@@ -607,7 +782,7 @@ function overlays() {
   }
   if (modal.kind === "settings")
     return modalFrame(
-      `<span class="eyebrow">EXPEDITION SETTINGS</span><h2>원정 관리</h2><div class="settings-options"><button data-action="help">${icon("info", 15)} 플레이 가이드</button><button data-action="scope">${icon("cards", 15)} 구현 범위와 규칙 차이</button><button data-action="export">${icon("download", 15)} 저장 파일 내보내기</button><label>${icon("cards", 15)} 저장 파일 가져오기<input type="file" id="import-save" accept=".json,application/json"></label><button data-action="sound">${icon(sound ? "sound" : "mute", 15)} 효과음 ${sound ? "켜짐" : "꺼짐"}</button><button data-action="home">${icon("home", 15)} 시작 화면으로 (현재 게임 저장)</button></div><div class="notice">${game.options.mode === "solo" ? `${game.options.aiCount} AI · ${{ easy: "쉬움", normal: "보통", hard: "어려움" }[game.options.difficulty]}` : `로컬 ${game.players.length}인`} · ${game.options.ix ? "익스 ON" : "익스 OFF"} · ${game.options.immortality ? "불멸 ON" : "불멸 OFF"}<br>외부 서버에 플레이 데이터를 전송하지 않습니다. 브라우저 데이터를 지우면 저장도 지워집니다.</div>`,
+      `<span class="eyebrow">EXPEDITION SETTINGS</span><h2>원정 관리</h2><div class="settings-options"><button data-action="deck">${icon("cards", 15)} 나의 덱 구성</button><button data-action="fast">${icon("play", 15)} AI 속도 ${fast ? "2×" : "1×"}</button><button data-action="help">${icon("info", 15)} 플레이 가이드</button><button data-action="scope">${icon("cards", 15)} 구현 범위와 규칙 차이</button><button data-action="export">${icon("download", 15)} 저장 파일 내보내기</button><label>${icon("cards", 15)} 저장 파일 가져오기<input type="file" id="import-save" accept=".json,application/json"></label><button data-action="sound">${icon(sound ? "sound" : "mute", 15)} 효과음 ${sound ? "켜짐" : "꺼짐"}</button><button data-action="home">${icon("home", 15)} 시작 화면으로 (현재 게임 저장)</button></div><div class="notice">${game.options.mode === "solo" ? `${game.options.aiCount} AI · ${{ easy: "쉬움", normal: "보통", hard: "어려움" }[game.options.difficulty]}` : `로컬 ${game.players.length}인`} · ${game.options.ix ? "익스 ON" : "익스 OFF"} · ${game.options.immortality ? "불멸 ON" : "불멸 OFF"}<br>외부 서버에 플레이 데이터를 전송하지 않습니다. 브라우저 데이터를 지우면 저장도 지워집니다.</div>`,
     );
   if (modal.kind === "newConfirm")
     return modalFrame(
@@ -645,9 +820,11 @@ function renderOverlay() {
 }
 function render() {
   const scroll = window.scrollY,
-    handScroll = $(".hand-cards")?.scrollLeft || 0;
+    handScroll = $(".hand-cards")?.scrollLeft || 0,
+    boardScroll = $(".board-viewport")?.scrollLeft || 0;
   $("#app").innerHTML = screen === "home" ? home() : gamePage();
   if ($(".hand-cards")) $(".hand-cards").scrollLeft = handScroll;
+  if ($(".board-viewport")) $(".board-viewport").scrollLeft = boardScroll;
   renderOverlay();
   window.scrollTo(0, scroll);
 }
@@ -695,7 +872,12 @@ function commit(action, ai = false) {
     aiError = "";
     save();
     if (action.type === "reveal") tab = "market";
-    if (["nextRound", "passCombat"].includes(action.type)) tab = "board";
+    if (action.type === "nextRound") tab = "board";
+    if (
+      (game.phase === "combat" && before.phase !== "combat") ||
+      action.type === "passCombat"
+    )
+      tab = "combat";
     if (
       game.options.mode === "hotseat" &&
       oldActor !== activeId() &&
@@ -744,6 +926,28 @@ document.addEventListener("click", (event) => {
   const b = event.target.closest("[data-action]");
   if (!b || b.disabled) return;
   const action = b.dataset.action;
+  if (action === "boardMode") {
+    boardMode = b.dataset.mode === "map" ? "map" : "large";
+    render();
+    return;
+  }
+  if (action === "jumpZone") {
+    document
+      .getElementById("zone-" + b.dataset.zone)
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+    return;
+  }
+  if (action === "finishHand") {
+    modal = null;
+    tab = "board";
+    render();
+    $(".tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
   if (action === "config") {
     config[b.dataset.key] = ["aiCount", "humans"].includes(b.dataset.key)
       ? Number(b.dataset.value)
@@ -781,6 +985,7 @@ document.addEventListener("click", (event) => {
   }
   if (action === "resume") {
     screen = "game";
+    tab = ["combat", "roundEnd"].includes(game.phase) ? "combat" : "board";
     modal = null;
     if (
       game.options.mode === "hotseat" &&
@@ -808,6 +1013,7 @@ document.addEventListener("click", (event) => {
       "deck",
       "atomics",
       "reclaimed",
+      "hand",
     ].includes(action)
   ) {
     modal = { kind: action };
@@ -829,8 +1035,7 @@ document.addEventListener("click", (event) => {
   if (action === "tab" || action === "mobileTab") {
     tab = b.dataset.tab;
     render();
-    if (action === "mobileTab")
-      $(".tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    $(".tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
   if (action === "card") {

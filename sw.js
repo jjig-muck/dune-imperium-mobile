@@ -1,4 +1,4 @@
-const CACHE = "imperium-v1-20261029-2";
+const CACHE = "imperium-v1-20261029-3";
 const FILES = [
   "./",
   "./index.html",
