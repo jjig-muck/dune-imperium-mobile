@@ -274,7 +274,7 @@ function resourceStrip(p) {
     )}<div class="resource supply">${icon("troops", 20)}<div><small>주둔 병력</small><strong>${p.garrison}</strong></div></div></div><span class="saved">${icon(storageError ? "info" : "check", 11)} ${storageError ? "저장 실패" : "이 기기에 저장됨"}</span></div>`;
 }
 function metric(type, value, label, cost = false) {
-  return `<span class="effect-token ${cost ? "cost-token" : "reward-token"}" data-resource="${type}">${icon(type, 22)}<strong>${e(value)}</strong><span>${e(label)}</span></span>`;
+  return `<span class="effect-token ${cost ? "cost-token" : "reward-token"}" data-resource="${type}">${icon(type, 16)}<strong>${e(value)}</strong><span>${e(label)}</span></span>`;
 }
 function effectTokens(effects, cost = false) {
   const names = {
@@ -380,11 +380,14 @@ function location(space) {
   </button>`;
 }
 function combatSummary() {
+  if (game.round === 0)
+    return '<div class="notice" role="status">지도자 시작 효과를 처리하고 있습니다.</div>';
   const c = conflict(game),
     player = viewPlayer();
   return `<button class="combat-launch" data-action="tab" data-tab="combat" aria-label="이번 분쟁 ${c.name}. 분쟁 지역과 전투 현황 보기"><span class="combat-launch-icon">${icon("swords", 24)}</span><span><small>이번 분쟁 · ${"ⅠⅡⅢ"[c.level - 1]}단계</small><strong>${c.name}</strong></span><span class="combat-launch-strength"><small>내 전투력</small><strong>${strength(player)}</strong></span><span class="combat-launch-link">전투 보기 ${icon("chevron", 16)}</span></button>`;
 }
 function battle() {
+  if (game.round === 0) return "";
   const c = conflict(game),
     settled = ["roundEnd", "ended"].includes(game.phase);
   const active = game.phase === "combat",
@@ -396,6 +399,29 @@ function battle() {
       : "병력 배치 중";
   return `<section class="battle-panel" aria-label="분쟁 카드와 전투 현황">
     ${active ? `<div class="combat-actions"><p>${e(game.players[activeId()].name)}의 ${pending(game) ? "선택" : "전투 음모"} 차례입니다. 모두 연속 통과하면 전투가 정산됩니다.</p><div><button class="secondary" data-action="intrigues">${icon("eye", 18)} 내 음모 확인</button>${canAct ? '<button class="primary" data-action="passCombat">전투 통과 →</button>' : game.players[activeId()].ai ? `<button class="secondary" data-action="pause">${paused ? "AI 계속하기" : "AI 일시 정지"}</button>` : ""}</div></div>` : !settled ? '<p class="battle-rule">전투 장소에 요원을 보내면 이번 턴 모집 유닛과 기존 주둔 유닛 최대 2개를 이곳에 배치할 수 있습니다.</p>' : ""}
+    <section class="combat-arena" aria-label="분쟁 지역"><header><h3>${icon("swords", 20)} 분쟁 지역</h3><span>${settled ? "투입 병력 회수됨" : game.options.ix ? "병력 2 · 함선 3 / 롬버 4" : "병력당 전투력 2"}</span></header>
+    <div class="shared-battlefield" aria-label="모든 플레이어가 함께 사용하는 전장"><span class="battlefield-center" aria-hidden="true">${icon("swords", 72)}</span><div class="arena-players">${game.players
+      .map(
+        (player) =>
+          `<section class="arena-player" style="--player-color:${player.color}" aria-label="${e(player.name)} · ${e(leaderById[player.leader].house)} · 전투력 ${strength(player)}"><div class="arena-player-heading"><span class="arena-player-name"><strong>${e(player.name)}</strong><small title="${e(leaderById[player.leader].name)}">${e(leaderById[player.leader].house)}</small></span><span class="arena-strength" title="전투력">${icon("swords", 14)}<b>${strength(player)}</b></span></div><div class="arena-units" aria-label="투입 병력 ${player.troops}개, 드레드노트 ${player.dreadCombat}개">${
+            player.troops + player.dreadCombat
+              ? Array(player.troops)
+                  .fill('<i class="troop-cube" aria-hidden="true"></i>')
+                  .join("") +
+                Array(player.dreadCombat)
+                  .fill(
+                    '<i class="dread-unit" aria-hidden="true">' +
+                      icon("ship", 14) +
+                      "</i>",
+                  )
+                  .join("")
+              : '<span class="arena-empty">투입 유닛 없음</span>'
+          }</div><div class="combat-counts"><span>병력 <b>${player.troops}</b></span>${game.options.ix ? `<span>함선 <b>${player.dreadCombat}</b></span>` : ""}<span>검 <b>${player.swords}</b></span></div></section>`,
+      )
+      .join("")}</div></div>
+    <div class="garrison-reserves" aria-label="전장 밖 주둔 유닛"><span class="reserve-caption">주둔지</span>${game.players.map((player) => `<span class="reserve-total" style="--player-color:${player.color}"><i aria-hidden="true"></i>${e(player.name)} ${icon("troops", 14)}<b>${player.garrison}</b>${game.options.ix ? icon("ship", 14) + "<b>" + player.dreadGarrison + "</b>" : ""}</span>`).join("")}</div>
+    <details class="combat-calculation"><summary>전투력 계산 보기</summary>${game.players.map((player) => `<p class="combat-formula"><span style="color:${player.color}">${e(player.name)}</span> · ${player.troops}×2${game.options.ix ? ` + ${player.dreadCombat}×${player.leader === "rhombur" ? 4 : 3}` : ""} + 검 ${player.swords} = ${strength(player)}${player.troops + player.dreadCombat ? "" : " (투입 유닛 없음)"}</p>`).join("")}</details></section>
+
     <section class="conflict-card"><div class="conflict-heading"><span class="pill">분쟁 ${"ⅠⅡⅢ"[c.level - 1]} · ${game.round}라운드</span><span class="battle-phase">${phaseText}</span></div><h2>${c.name}</h2>${c.location ? `<p class="conflict-location">${icon("city", 19)} 승리 시 ${spaceById[c.location].name} 지배권 획득</p>` : ""}<h3>순위별 보상</h3><div class="conflict-rewards">${c.rewards
       .slice(0, game.players.length === 4 ? 3 : 2)
       .map(
@@ -405,20 +431,6 @@ function battle() {
       .join(
         "",
       )}</div><p class="battle-rule">동률이면 한 단계 낮은 보상 · 병력과 드레드노트가 없으면 보상 없음</p></section>
-    <section class="combat-arena" aria-label="분쟁 지역"><header><h3>${icon("swords", 23)} 분쟁 지역</h3><span>${settled ? "투입 병력 회수됨" : "이곳에 투입한 유닛만 전투에 참가"}</span></header><div class="arena-players">${game.players
-      .map(
-        (player) =>
-          `<section class="arena-player" style="--player-color:${player.color}"><div class="arena-player-heading"><strong>${e(player.name)}</strong><span><b>${strength(player)}</b> 전투력</span></div><div class="arena-units" aria-label="${e(player.name)} 투입 병력 ${player.troops}개, 드레드노트 ${player.dreadCombat}개">${
-            player.troops + player.dreadCombat
-              ? `${Array(player.troops).fill('<i class="troop-cube"></i>').join("")}${Array(
-                  player.dreadCombat,
-                )
-                  .fill(`<i class="dread-unit">${icon("ship", 22)}</i>`)
-                  .join("")}`
-              : '<span class="arena-empty">투입 유닛 없음</span>'
-          }</div><div class="combat-counts"><span>${icon("troops", 18)} 병력 <b>${player.troops}</b></span>${game.options.ix ? `<span>${icon("ship", 18)} 함선 <b>${player.dreadCombat}</b></span>` : ""}<span>${icon("swords", 18)} 검 <b>${player.swords}</b></span></div><p class="combat-formula">${player.troops}×2${game.options.ix ? ` + ${player.dreadCombat}×${player.leader === "rhombur" ? 4 : 3}` : ""} + 검 ${player.swords}${player.troops + player.dreadCombat ? ` = ${strength(player)}` : " → 유닛이 없어 0"}</p><div class="garrison-count">${icon("troops", 18)} 주둔지 병력 <strong>${player.garrison}</strong>${game.options.ix ? `<span>함선 <strong>${player.dreadGarrison}</strong></span>` : ""}</div></section>`,
-      )
-      .join("")}</div></section>
   </section>`;
 }
 function board() {
@@ -609,7 +621,7 @@ function gamePage() {
     ];
   const wide = ["board", "combat"].includes(tab);
   return `<div class="game-shell"><header class="game-nav"><button data-action="home" style="border:0;padding:0" aria-label="시작 화면">${wordmark()}</button><div><div class="round-label">ROUND ${String(game.round).padStart(2, "0")} <span class="muted">/ 10</span> <span class="badge">${game.options.target} VP</span></div><div class="round-dots">${Array.from({ length: 10 }, (_, i) => `<i class="${i < game.round ? "done" : ""}"></i>`).join("")}</div></div><div class="game-nav-actions"><button class="icon-btn" data-action="undo" aria-label="내 이전 결정 되돌리기" ${!undo ? "disabled" : ""}>${icon("undo", 17)}</button><button class="icon-btn" data-action="sound" aria-label="${sound ? "소리 끄기" : "소리 켜기"}">${icon(sound ? "sound" : "mute", 17)}</button><button class="icon-btn" data-action="settings" aria-label="게임 설정과 저장">${icon("menu", 19)}</button></div></header>${playerRow()}${resourceStrip(p)}${combatSummary()}${storageError ? `<div class="notice">${e(storageError)}</div>` : ""}
-  <nav class="tabs game-tabs" aria-label="게임 화면">${navigation.map(([id, ico, name]) => `<button class="${tab === id ? "active" : ""}" data-action="tab" data-tab="${id}" aria-current="${tab === id ? "page" : "false"}">${icon(ico, 18)} ${name}${id === "market" && game.phase === "reveal" ? `<span>${p.persuasion}</span>` : ""}</button>`).join("")}</nav>
+  <div id="game-content" aria-hidden="true"></div><nav class="tabs game-tabs" aria-label="게임 화면">${navigation.map(([id, ico, name]) => `<button class="${tab === id ? "active" : ""}" data-action="tab" data-tab="${id}" aria-current="${tab === id ? "page" : "false"}">${icon(ico, 18)} ${name}${id === "market" && game.phase === "reveal" ? `<span>${p.persuasion}</span>` : ""}</button>`).join("")}</nav>
   ${aiError ? `<p class="notice ai-error" role="alert">${e(aiError)}</p>` : ""}
   ${tab !== "combat" && !["combat", "roundEnd", "ended"].includes(game.phase) ? turnBar(p) : ""}
   <div class="game-layout ${wide ? "wide-view" : ""}"><main class="board-main">${statusBanner()}${tab === "board" ? board() : tab === "combat" ? battle() : tab === "market" ? market() : tab === "empire" ? empire() : logView()}<div class="game-fineprint">비공식 팬 에디션 · 선별 카드 · ${game.options.ix ? "익스 ON" : "기본판"} ${game.options.immortality ? "· 불멸 ON" : ""} · <button class="text-button" style="font-size:inherit;padding:0" data-action="scope">구현 범위</button></div></main>${wide ? "" : turnPanel(p)}</div>
@@ -818,6 +830,14 @@ function renderOverlay() {
   previousOverlay = overlayType;
   scheduleAI();
 }
+function scrollToGameContent() {
+  const anchor = $("#game-content");
+  if (anchor)
+    window.scrollTo({
+      top: window.scrollY + anchor.getBoundingClientRect().top,
+      behavior: "smooth",
+    });
+}
 function render() {
   const scroll = window.scrollY,
     handScroll = $(".hand-cards")?.scrollLeft || 0,
@@ -945,7 +965,7 @@ document.addEventListener("click", (event) => {
     modal = null;
     tab = "board";
     render();
-    $(".tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToGameContent();
     return;
   }
   if (action === "config") {
@@ -1035,7 +1055,7 @@ document.addEventListener("click", (event) => {
   if (action === "tab" || action === "mobileTab") {
     tab = b.dataset.tab;
     render();
-    $(".tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToGameContent();
     return;
   }
   if (action === "card") {
