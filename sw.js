@@ -1,4 +1,4 @@
-const CACHE = "imperium-v1-20261029-1";
+const CACHE = "imperium-v1-20261029-2";
 const FILES = [
   "./",
   "./index.html",
@@ -7,7 +7,6 @@ const FILES = [
   "./src/data.js",
   "./src/engine.js",
   "./src/ai.js",
-  "./assets/arrakis.svg",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",

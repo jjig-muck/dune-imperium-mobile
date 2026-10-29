@@ -79,6 +79,11 @@ try {
 }
 
 const paths = {
+  hawk: "m2 7 7 3 3-6 3 6 7-3-5 7-5 6-5-6-5-7Zm7 3 3 3 3-3",
+  ram: "M8 9C2 1-2 13 6 14m10-5c6-8 10 4 2 5M8 8l4 3 4-3v9l-4 4-4-4V8Zm1 6h1m4 0h1",
+  mountain: "m2 19 7-13 4 7 3-5 6 11H2Zm5-9 2 3 2-3",
+  tree: "M12 22V3m0 5L7 4m5 8 6-6m-6 10-8-5m8 8 8-6M7 22h10",
+  blade: "m12 2 3 5-3 10-3-10 3-5Zm-5 15h10m-5 0v5m-2 0h4",
   arrow: "M4 12h16m-6-6 6 6-6 6",
   chevron: "m8 5 7 7-7 7",
   close: "m6 6 12 12M18 6 6 18",
@@ -127,21 +132,9 @@ function factionIcon(id, size = 15) {
 }
 const wordmark = () =>
   '<span class="wordmark">DUNE<small>IMPERIUM</small></span>';
-function portrait(id, mini = false) {
-  const l = leaderById[id],
-    n = LEADERS.findIndex((x) => x.id === id),
-    woman = ["helena", "ariana", "ilesa", "tessia", "yuna"].includes(id),
-    old = ["leto", "baron", "memnon", "hundro", "ilban", "armand"].includes(id);
-  const hair = woman
-    ? "M50 90Q36 43 65 29q34-22 57 5 18 22 7 61l-12-36-18-13-20 14-15 36Z"
-    : old
-      ? "M56 70Q42 37 72 29q32-15 49 17l-3 26-13-26-25 4Z"
-      : "M51 78q-8-42 22-52 31-12 47 14l8 31-20-23-11 11-10-12-29 40Z";
-  return `<svg viewBox="0 0 180 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${e(l.name)} 오리지널 일러스트"><defs><linearGradient id="p${n}${mini ? "m" : "l"}" x2="0" y2="1"><stop stop-color="${l.color}" stop-opacity=".33"/><stop offset="1" stop-color="#17241c"/></linearGradient></defs><circle cx="90" cy="81" r="65" fill="none" stroke="${l.color}" opacity=".25"/><circle cx="90" cy="81" r="58" fill="url(#p${n}${mini ? "m" : "l"})"/><path d="M12 200 29 148l41-22 7-23h26l8 23 39 23 19 51Z" fill="#15201b" stroke="${l.color}" stroke-opacity=".5"/><path d="m71 124 19 37 19-37 20 12-13 64H65l-13-64Z" fill="${l.color}" opacity=".18"/><path d="M62 57q27-28 53 0l-3 38-12 25H79L65 96Z" fill="#b6a07b" opacity=".7"/><path d="${hair}" fill="#26342b" stroke="${l.color}" stroke-opacity=".5"/><path d="m65 78 13-2m21 0 12 2m-24 3-4 17h11m-14 9h19" stroke="#29382b" stroke-width="2" fill="none"/><path d="m69 81 7 1m25-1 7 1" stroke="${id === "paul" ? "#8fc3d1" : "#e0c997"}" stroke-width="2"/>${old ? '<path d="m72 101 9 15h17l12-18-5 24-15 10-16-13Z" fill="#3c4636" opacity=".8"/>' : ""}<path d="m35 154 25 30m84-30-23 30m-31-22v38" stroke="${l.color}" stroke-opacity=".4"/><circle cx="90" cy="174" r="4" fill="${l.color}"/><path d="M15 197h150" stroke="${l.color}" opacity=".25"/></svg>`;
-}
-function cardArt(c) {
-  const n = [...c.id].reduce((a, x) => a + x.charCodeAt(0), 0) % 4;
-  return `<svg viewBox="0 0 200 95" fill="none" aria-hidden="true"><circle cx="100" cy="43" r="30" stroke="currentColor" opacity=".4"/><circle cx="100" cy="43" r="37" stroke="currentColor" opacity=".15"/>${['<path d="m47 95 37-67 11 20 13-30 51 77Z" fill="currentColor" opacity=".27"/><path d="m70 95 27-48 35 48m-48-67 3 67" stroke="currentColor"/>', '<path d="M58 95V45l42-24 42 24v50M73 95V56l27-15 27 15v39M100 41v54M50 70h100" stroke="currentColor"/><path d="M62 95V48l38-21 38 21v47" fill="currentColor" opacity=".08"/>', '<path d="m100 12 29 31-29 31-29-31 29-31ZM100 12v62M71 43h58M36 95c28-24 53-20 86-16 19 3 33 2 45-10" stroke="currentColor"/><path d="M30 95c35-27 77-10 140-20v20Z" fill="currentColor" opacity=".2"/>', '<path d="m100 17 9 24 25 3-20 17 5 25-19-12-20 12 5-25-19-17 25-3 9-24ZM40 92h120" stroke="currentColor"/><path d="m100 30 6 19 19 1-15 12 3 15-13-8-13 8 3-15-15-12 19-1Z" fill="currentColor" opacity=".1"/>'][n]}</svg>`;
+function houseMark(id, size = 22) {
+  const leader = leaderById[id];
+  return `<span class="house-mark" style="color:${leader.color}" aria-hidden="true">${icon(leader.symbol, size)}</span>`;
 }
 function card(
   id,
@@ -157,7 +150,7 @@ function card(
         : context === "tleilax"
           ? `data-action="marketCard" data-index="${index}" data-zone="tleilax"`
           : 'data-action="inspectCard" data-id="' + id + '"';
-  return `<button class="card ${isSelected ? "selected" : ""} ${c.graft ? "graft" : ""}" ${attrs} aria-label="${e(c.name)} · ${describe(c.reveal)}" style="--card-color:${FACTIONS[c.faction]?.color || "#cdb27a"}"><span class="card-art">${cardArt(c)}<span class="card-source">${c.graft ? "接 · 접합" : c.tleilaxu ? "TLEILAXU" : c.expansion === "ix" ? "RISE OF IX" : c.expansion === "immortality" ? "IMMORTALITY" : c.starter ? "STARTER" : "IMPERIUM"}</span>${!c.starter ? `<span class="card-price">${c.cost}</span>` : ""}</span><span class="card-title">${e(c.name)}</span><span class="card-icons">${c.icons.map((i) => factionIcon(i, 13)).join("")}${c.infiltrate ? `<span title="상대 요원 침투">${icon("eye", 12)}</span>` : ""}</span><span class="card-effect">${describe(c.agent) || "장소의 효과를 얻습니다."}</span><span class="card-reveal">${describe(c.reveal) || "공개 효과 없음"}</span>${isSelected ? `<span class="checkmark">${icon("check", 12)}</span>` : ""}</button>`;
+  return `<button class="card ${isSelected ? "selected" : ""} ${c.graft ? "graft" : ""}" ${attrs} aria-label="${e(c.name)} · ${describe(c.reveal)}" style="--card-color:${FACTIONS[c.faction]?.color || "#cdb27a"}"><span class="card-header"><span class="card-source">${c.graft ? "접합" : c.tleilaxu ? "틀레이락스" : c.expansion === "ix" ? "익스" : c.expansion === "immortality" ? "불멸" : c.starter ? "시작" : "제국"}</span>${isSelected ? `<span class="checkmark">${icon("check", 12)}</span>` : ""}${!c.starter ? `<span class="card-price">${c.cost}</span>` : ""}</span><span class="card-title">${e(c.name)}</span><span class="card-icons">${c.icons.map((i) => factionIcon(i, 13)).join("")}${c.infiltrate ? `<span title="상대 요원 침투">${icon("eye", 12)}</span>` : ""}</span><span class="card-effect">${describe(c.agent) || "장소의 효과를 얻습니다."}</span><span class="card-reveal">${describe(c.reveal) || "공개 효과 없음"}</span></button>`;
 }
 function settingsSave() {
   try {
@@ -227,8 +220,8 @@ const difficultyText = {
 function home() {
   const l = leaderById[config.leader] || LEADERS[0];
   return `<nav class="site-nav">${wordmark()}<div class="nav-right"><span class="edition">A FAN-MADE EXPERIENCE</span><button data-action="help">플레이 가이드 ${icon("arrow", 13)}</button></div></nav>
-  <main><section class="hero"><span class="hero-number">ARRAKIS / 10,191 A.G.</span><div class="hero-content"><div class="eyebrow">THE SPICE MUST FLOW</div><h1>권력은<br>주어지지 않는다.<br><span>쟁취하는 것이다.</span></h1><p class="hero-copy">카드를 펼치고, 동맹을 맺고, 사막을 지배하세요.<br>아라키스의 운명이 당신의 손에 달려 있습니다.</p><div class="hero-actions"><button class="primary" data-action="setup">새로운 원정 ${icon("arrow", 18)}</button>${game ? `<button class="secondary" data-action="resume">${game.phase === "ended" ? "지난 결과 보기" : "이어서 플레이"} ${icon("play", 13)}</button>` : ""}</div><div class="hero-meta"><span>${icon("agent", 13)} 나 + AI 2–3명</span><span>${icon("cards", 13)} 설치 없이 플레이</span><span>${icon("moon", 13)} 자동 저장</span></div></div><span class="coordinates">26° 10′ N / 18° 55′ E · IMPERIAL BASIN</span><div class="scroll-cue">PREPARE YOUR HOUSE</div></section>
-  <section class="setup" id="setup"><div class="section-heading"><div><span class="eyebrow">01 / PREPARE YOUR EXPEDITION</span><h2>당신의 제국을 설계하세요.</h2></div><p>지도자와 전략을 고르고 원정에 나서세요.<br>모든 AI는 같은 자원과 규칙으로 경쟁합니다.</p></div>
+  <main><section class="hero"><div class="hero-content"><div class="eyebrow">DUNE · IMPERIUM</div><h1>듄: 임페리움</h1><p class="hero-copy">덱을 만들고, 요원을 보내고, 아라키스의 패권을 차지하세요.</p><div class="hero-meta"><span>${icon("agent", 14)} 나 + AI 2–3명</span><span>${icon("cards", 14)} 확장 선택</span><span>${icon("moon", 14)} 자동 저장</span></div>${game ? `<div class="hero-actions"><button class="primary" data-action="resume">${game.phase === "ended" ? "지난 결과 보기" : "이어서 플레이"} ${icon("arrow", 16)}</button><button class="text-button" data-action="setup">새 게임 설정</button></div>` : ""}</div></section>
+  <section class="setup" id="setup"><div class="section-heading"><div><h2>새 게임 설정</h2></div><p>상대와 확장, 지도자를 선택하세요.</p></div>
   ${storageError ? `<div class="notice">${e(storageError)}</div>` : ""}
   <div class="setup-layout"><div><div class="setting-block"><div class="setting-label">${config.mode === "solo" ? "상대 AI" : "플레이어"}<span>${config.mode === "solo" ? "당신은 첫 번째 플레이어입니다" : "한 기기를 번갈아 사용합니다"}</span></div><div class="segments">${(config.mode === "solo" ? [2, 3] : [2, 3, 4]).map((n) => `<button class="${(config.mode === "solo" ? config.aiCount : config.humans) === n ? "active" : ""}" data-action="config" data-key="${config.mode === "solo" ? "aiCount" : "humans"}" data-value="${n}" aria-pressed="${(config.mode === "solo" ? config.aiCount : config.humans) === n}">${config.mode === "solo" ? `나 + AI ${n}명` : `${n}인 플레이`}</button>`).join("")}</div><div class="mode-link"><button data-action="switchMode">${config.mode === "solo" ? "한 기기에서 친구와 플레이하기" : "기본 솔로 모드로 돌아가기"} ${icon("arrow", 12)}</button></div></div>
   ${
@@ -253,14 +246,14 @@ function home() {
   )
     .map(
       (x) =>
-        `<button class="leader-pick ${x.id === l.id ? "selected" : ""}" data-action="leader" data-id="${x.id}" aria-label="${e(x.name)}" aria-pressed="${x.id === l.id}"><div class="portrait-mini">${portrait(x.id, true)}</div><strong>${e(x.name.replace(" 아트레이데스 공작", " 공작").replace(" 소르발드 백작부인", " 백작부인").replace(" 소르발드 백작", " 백작").replace(" 리체스 백작", " 백작").replace("블라디미르 하코넨 남작", "하코넨 남작").replace("글로수 “야수” 라반", "야수 라반").replace(" 버니우스 왕자", " 왕자").replace(" 에카즈 대공", " 대공").replace(" 모리타니 자작", " 자작"))}</strong><small>${x.house}${x.expansion ? " · IX" : ""}</small></button>`,
+        `<button class="leader-pick ${x.id === l.id ? "selected" : ""}" data-action="leader" data-id="${x.id}" aria-label="${e(x.name)}" aria-pressed="${x.id === l.id}">${houseMark(x.id)}<span class="leader-label"><strong>${e(x.name.replace(" 아트레이데스 공작", " 공작").replace(" 소르발드 백작부인", " 백작부인").replace(" 소르발드 백작", " 백작").replace(" 리체스 백작", " 백작").replace("블라디미르 하코넨 남작", "하코넨 남작").replace("글로수 “야수” 라반", "야수 라반").replace(" 버니우스 왕자", " 왕자").replace(" 에카즈 대공", " 대공").replace(" 모리타니 자작", " 자작"))}</strong><small>${x.house}${x.expansion ? " · 익스" : ""}</small></span></button>`,
     )
     .join("")}</div></div>
-  </div><aside class="leader-preview"><div class="portrait-large">${portrait(l.id)}</div><div class="leader-body"><span class="eyebrow">HOUSE ${l.house === "아트레이데스" ? "ATREIDES" : l.house === "하코넨" ? "HARKONNEN" : l.house === "리체스" ? "RICHESE" : l.house === "소르발드" ? "THORVALD" : l.house === "에카즈" ? "ECAZ" : l.house === "버니우스" ? "VERNIUS" : "MORITANI"}</span><h3>${e(l.name)}</h3><p class="english">${e(l.en)} <span class="gold">${"·".repeat(l.complexity)}</span></p><div class="ability"><strong>${icon("eye", 14)} ${l.passive}</strong><p>${l.ability}</p></div><div class="ability"><strong>${icon("solari", 14)} ${l.ring}</strong><p>${l.ringText}</p></div></div></aside></div>
-  <div class="begin-panel"><div class="begin-summary"><strong>${config.mode === "solo" ? `${config.aiCount + 1}인 원정 · ${{ easy: "쉬움", normal: "보통", hard: "어려움" }[config.difficulty]}` : `${config.humans}인 로컬 원정`}</strong><p>${[config.ix ? "익스의 부상" : null, config.immortality ? "불멸" : null].filter(Boolean).join(" + ") || "기본판"} · ${config.target}승점 · 최대 10라운드</p></div><button class="primary" data-action="start">아라키스로 출발 ${icon("arrow", 19)}</button></div><div class="scope-note"><span>비공식 팬 에디션 · 핵심 규칙과 선별 카드 구성입니다.<br>모든 실물 카드·음모를 재현한 완성판은 아닙니다.</span><button class="text-button" data-action="scope">구현 범위 확인 ${icon("info", 12)}</button></div></section></main><footer class="footer">${wordmark()}<p>Dune: Imperium의 비공식 팬 프로젝트입니다. 원작의 명칭과 세계관은 각 권리자에게 귀속됩니다.<br>화면·아이콘·일러스트는 이 프로젝트를 위해 새로 제작했습니다. 게임 데이터는 이 브라우저에 저장됩니다.</p><span>BUILD 0.1 · KO</span></footer>`;
+  </div><aside class="leader-preview"><div class="leader-body"><div class="leader-heading">${houseMark(l.id, 28)}<div><span class="eyebrow">${e(l.house)} 가문</span><h3>${e(l.name)}</h3></div></div><p class="english">${e(l.en)} <span class="badge">운용 난도 ${l.complexity}</span></p><div class="ability"><strong>${icon("eye", 14)} ${l.passive}</strong><p>${l.ability}</p></div><div class="ability"><strong>${icon("solari", 14)} ${l.ring}</strong><p>${l.ringText}</p></div></div></aside></div>
+  <div class="begin-panel"><div class="begin-summary"><strong>${config.mode === "solo" ? `${config.aiCount + 1}인 원정 · ${{ easy: "쉬움", normal: "보통", hard: "어려움" }[config.difficulty]}` : `${config.humans}인 로컬 원정`}</strong><p>${[config.ix ? "익스의 부상" : null, config.immortality ? "불멸" : null].filter(Boolean).join(" + ") || "기본판"} · ${config.target}승점 · 최대 10라운드</p></div><button class="primary" data-action="start">아라키스로 출발 ${icon("arrow", 19)}</button></div><div class="scope-note"><span>비공식 팬 에디션 · 핵심 규칙과 선별 카드 구성입니다.<br>모든 실물 카드·음모를 재현한 완성판은 아닙니다.</span><button class="text-button" data-action="scope">구현 범위 확인 ${icon("info", 12)}</button></div></section></main><footer class="footer">${wordmark()}<p>Dune: Imperium의 비공식 팬 프로젝트입니다. 원작의 명칭과 세계관은 각 권리자에게 귀속됩니다.<br>화면과 아이콘은 이 프로젝트를 위해 새로 제작했습니다. 게임 데이터는 이 브라우저에 저장됩니다.</p><span>BUILD 0.1 · KO</span></footer>`;
 }
 function playerRow() {
-  return `<section class="players" style="--players:${game.players.length}" aria-label="플레이어 점수">${game.players.map((p) => `<button class="player ${activeId() === p.id && game.phase !== "ended" ? "active" : ""}" style="--player-color:${p.color}" data-action="player" data-id="${p.id}"><div class="avatar">${portrait(p.leader, true)}</div><div class="player-info"><strong>${e(p.name)}</strong><small>${e(leaderById[p.leader].name.replace("아트레이데스", "").replace("소르발드", ""))}</small></div><span class="score">${p.vp}<small>VP</small></span><span class="you">${p.ai ? "AI" : game.options.mode === "solo" ? "YOU" : "HUMAN"} ${p.id === game.first ? "· 先" : ""}</span></button>`).join("")}</section>`;
+  return `<section class="players" style="--players:${game.players.length}" aria-label="플레이어 점수">${game.players.map((p) => `<button class="player ${activeId() === p.id && game.phase !== "ended" ? "active" : ""}" style="--player-color:${p.color}" data-action="player" data-id="${p.id}">${houseMark(p.leader, 20)}<div class="player-info"><strong>${e(p.name)}</strong><small>${e(leaderById[p.leader].name.replace("아트레이데스", "").replace("소르발드", ""))}</small></div><span class="score">${p.vp}<small>VP</small></span><span class="you">${p.ai ? "AI" : game.options.mode === "solo" ? "YOU" : "HUMAN"} ${p.id === game.first ? "· 先" : ""}</span></button>`).join("")}</section>`;
 }
 function resourceStrip(p) {
   return `<div class="resource-strip"><div class="resources">${[

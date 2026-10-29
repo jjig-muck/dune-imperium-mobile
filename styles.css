@@ -212,15 +212,14 @@ button.secondary {
   margin-top: 4px;
 }
 .site-nav {
-  height: 80px;
+  height: 72px;
+  max-width: 1220px;
+  margin: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 max(5vw, 22px);
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: 3;
-  border-bottom: 1px solid #e5d3a91a;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--line);
 }
 .nav-right {
   display: flex;
@@ -238,130 +237,65 @@ button.secondary {
   letter-spacing: 0.12em;
 }
 .hero {
-  min-height: 740px;
-  height: 92svh;
-  max-height: 1050px;
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-}
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background: url("./assets/arrakis.svg") center/cover;
-}
-.hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(90deg, #101a17f0 0%, #101a17b0 30%, #101a1710 70%),
-    linear-gradient(0deg, var(--bg), transparent 22%);
+  max-width: 1220px;
+  margin: auto;
+  padding: 40px 40px 30px;
+  border-bottom: 1px solid var(--line);
 }
 .hero-content {
-  margin-left: max(8vw, 24px);
-  padding: 110px 0 70px;
-  max-width: 650px;
-  width: 70%;
+  width: 100%;
 }
 .hero .eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 28px;
-}
-.hero .eyebrow::before {
-  content: "";
-  height: 1px;
-  width: 35px;
-  background: var(--gold);
+  font-size: 10px;
+  margin-bottom: 12px;
 }
 .hero h1 {
-  font: 400 clamp(35px, 4.9vw, 72px) / 1.5 var(--serif);
-  letter-spacing: -0.045em;
-  margin-bottom: 23px;
-}
-.hero h1 span {
-  color: var(--gold2);
+  font: 500 clamp(30px, 4vw, 42px) / 1.35 var(--sans);
+  letter-spacing: -0.05em;
+  margin-bottom: 12px;
 }
 .hero-copy {
   font-size: 13px;
-  color: #c0c8ba;
-  line-height: 2.1;
-  max-width: 350px;
-  margin-bottom: 34px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.9;
 }
 .hero-actions {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 18px;
+  margin-top: 22px;
   flex-wrap: wrap;
 }
 .hero-meta {
   display: flex;
-  gap: 28px;
-  font-size: 10px;
-  margin-top: 40px;
-  color: #a9b5a6;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 11px;
+  margin-top: 18px;
+  color: var(--muted);
 }
 .hero-meta span {
   display: flex;
   gap: 7px;
   align-items: center;
 }
-.coordinates {
-  position: absolute;
-  bottom: 45px;
-  right: 5vw;
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: #cbb98f;
-  writing-mode: vertical-rl;
-}
-.hero-number {
-  position: absolute;
-  right: 5vw;
-  top: 110px;
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: #c4c6ae;
-}
-.scroll-cue {
-  position: absolute;
-  left: 50%;
-  bottom: 28px;
-  font-size: 9px;
-  color: #a5aa96;
-  letter-spacing: 0.22em;
-  text-align: center;
-}
-.scroll-cue::after {
-  content: "";
-  display: block;
-  width: 1px;
-  height: 26px;
-  background: #aaa486;
-  margin: 8px auto 0;
-}
 .setup {
   max-width: 1220px;
   margin: auto;
-  padding: 75px 40px 85px;
+  padding: 28px 40px 64px;
 }
 .section-heading {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 35px;
+  gap: 16px;
+  margin-bottom: 26px;
 }
 .section-heading h2 {
-  font: 500 32px var(--serif);
-  letter-spacing: -0.04em;
-  margin: 10px 0 0;
+  font: 500 22px / 1.5 var(--sans);
+  letter-spacing: -0.03em;
+  margin: 0;
 }
 .section-heading > p {
   max-width: 300px;
@@ -495,42 +429,35 @@ button.secondary {
 }
 .leader-picker {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 .leader-pick {
-  border-radius: 3px;
-  padding: 11px 4px 9px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 4px;
+  padding: 12px;
+  min-height: 68px;
   min-width: 0;
-  text-align: center;
-  background: #19211e;
-}
-.leader-pick .portrait-mini {
-  height: 66px;
-  width: 66px;
-  margin: auto auto 7px;
-  opacity: 0.7;
+  text-align: left;
+  background: var(--panel);
 }
 .leader-pick.selected {
   border-color: var(--gold);
   background: #bda46813;
 }
-.leader-pick.selected .portrait-mini {
-  opacity: 1;
-}
 .leader-pick strong {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.6;
 }
 .leader-pick small {
   display: block;
-  font-size: 8px;
+  font-size: 10px;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 .leader-preview {
   position: sticky;
@@ -538,26 +465,14 @@ button.secondary {
   align-self: start;
   border: 1px solid var(--line);
   border-radius: 4px;
-  background: linear-gradient(150deg, #2d382d, #19211e 70%);
-  overflow: hidden;
-}
-.portrait-large {
-  height: 260px;
-  width: 100%;
-  padding: 20px 45px 0;
-  background: radial-gradient(ellipse at 50% 90%, #cdb27a21, transparent 65%);
-  border-bottom: 1px solid var(--line);
-}
-.portrait-large > svg {
-  height: 100%;
-  width: 100%;
+  background: var(--panel);
 }
 .leader-body {
   padding: 25px;
 }
 .leader-body h3 {
-  font: 500 21px/1.6 var(--serif);
-  margin: 8px 0;
+  font: 500 20px / 1.6 var(--sans);
+  margin: 5px 0 0;
 }
 .leader-body .english {
   font-size: 10px;
@@ -718,18 +633,6 @@ button.secondary {
 .player.active {
   border-color: #cdb27a66;
 }
-.player .avatar {
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: #ffffff05;
-  overflow: hidden;
-}
-.player .avatar svg {
-  width: 100%;
-  height: 100%;
-}
 .player-info {
   min-width: 0;
   flex: 1;
@@ -861,39 +764,22 @@ button.secondary {
   border-radius: 2px;
 }
 .battlefield {
-  height: 190px;
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  border: 1px solid #b49c654d;
-  border-radius: 3px;
+  min-height: 148px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
   margin-bottom: 22px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  background: #263327;
-}
-.battlefield::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background: url("./assets/arrakis.svg") center 62% / cover;
-  opacity: 0.45;
-}
-.battlefield::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(90deg, #121d17dd, transparent 65%, #121d1788);
+  background: var(--panel);
 }
 .battle-info {
   padding: 23px;
   min-width: 0;
 }
 .battle-info h2 {
-  font: 500 22px var(--serif);
-  margin: 10px 0 14px;
+  font: 500 22px / 1.5 var(--sans);
+  margin: 8px 0 14px;
 }
 .battle-info .eyebrow {
   font-size: 8px;
@@ -1089,8 +975,8 @@ button.secondary {
 .card {
   position: relative;
   min-width: 0;
-  border: 1px solid #cdb27a35;
-  background: linear-gradient(145deg, #30372a, #18221c);
+  border: 1px solid var(--line);
+  background: var(--panel);
   border-radius: 4px;
   padding: 0;
   text-align: left;
@@ -1104,42 +990,19 @@ button.card.selected {
   box-shadow: 0 0 0 1px var(--gold);
   transform: translateY(-3px);
 }
-.card .card-art {
-  height: 74px;
-  position: relative;
-  border-bottom: 1px solid #cdb27a15;
-  overflow: hidden;
-  background: radial-gradient(ellipse at 50% 90%, #cfb57824, transparent 80%);
-}
-.card-art > svg {
-  width: 100%;
-  height: 100%;
-  color: var(--card-color, var(--gold));
-  opacity: 0.6;
-}
 .card .card-price {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  border: 1px solid #dcc38a44;
-  background: #15201ae8;
+  border: 1px solid var(--line);
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  width: 23px;
+  height: 23px;
   display: grid;
   place-items: center;
-  font:
-    15px Georgia,
-    serif;
+  font: 14px var(--sans);
   color: var(--gold2);
 }
 .card .card-source {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  font-size: 7px;
-  color: #c9c9aa;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  color: var(--muted);
 }
 .card .card-title {
   font-size: 10px;
@@ -1173,13 +1036,12 @@ button.card.selected {
   min-height: 30px;
 }
 .card .checkmark {
-  position: absolute;
-  inset: 7px auto auto 7px;
+  margin-left: auto;
   background: var(--gold);
-  color: #17241c;
+  color: var(--bg);
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: grid;
   place-items: center;
 }
@@ -1211,9 +1073,6 @@ button.card.selected {
   grid-template-columns: repeat(3, 1fr);
   gap: 13px;
 }
-.market-grid .card-art {
-  height: 110px;
-}
 .market-grid .card-title {
   font-size: 12px;
 }
@@ -1221,7 +1080,7 @@ button.card.selected {
   min-height: 45px;
 }
 .market-grid .card {
-  min-height: 235px;
+  min-height: 185px;
 }
 .market-grid .card .card-reveal {
   font-size: 10px;
@@ -1784,9 +1643,6 @@ button.card.selected {
   .hand-cards {
     grid-template-columns: 1fr 1fr;
   }
-  .card .card-art {
-    height: 86px;
-  }
 }
 @media (max-width: 1100px) {
   .setup-layout {
@@ -1794,7 +1650,7 @@ button.card.selected {
     gap: 22px;
   }
   .setup {
-    padding: 60px 30px;
+    padding: 28px 30px 56px;
   }
   .game-shell {
     padding: 0 22px 40px;
@@ -1809,10 +1665,6 @@ button.card.selected {
   .player {
     gap: 8px;
     padding: 12px 10px;
-  }
-  .player .avatar {
-    width: 32px;
-    height: 32px;
   }
   .player-info strong {
     font-size: 10px;
@@ -1839,9 +1691,6 @@ button.card.selected {
   .card .card-title {
     font-size: 9px;
   }
-  .card .card-art {
-    height: 60px;
-  }
   .card .card-effect {
     font-size: 8px;
   }
@@ -1850,34 +1699,8 @@ button.card.selected {
   }
 }
 @media (max-width: 800px) {
-  .hero {
-    height: 85svh;
-    min-height: 640px;
-  }
-  .hero-content {
-    width: 80%;
-    margin-left: 6vw;
-  }
-  .hero::before {
-    background-position: 62% center;
-  }
-  .hero h1 {
-    font-size: 46px;
-  }
   .setup-layout {
     grid-template-columns: 1fr;
-  }
-  .leader-preview {
-    position: static;
-    display: grid;
-    grid-template-columns: 190px 1fr;
-  }
-  .portrait-large {
-    height: 100%;
-    min-height: 260px;
-    padding: 20px 15px 0;
-    border-bottom: 0;
-    border-right: 1px solid var(--line);
   }
   .leader-body {
     padding: 22px;
@@ -1887,13 +1710,6 @@ button.card.selected {
   }
   .ability {
     margin-top: 15px;
-  }
-  .leader-picker {
-    grid-template-columns: repeat(4, 1fr);
-  }
-  .leader-pick .portrait-mini {
-    height: 65px;
-    width: 65px;
   }
   .game-layout {
     display: flex;
@@ -1955,9 +1771,6 @@ button.card.selected {
   .turn-actions .secondary {
     padding: 10px 7px;
   }
-  .card .card-art {
-    height: 56px;
-  }
   .card .card-effect {
     font-size: 8px;
     min-height: 37px;
@@ -1995,9 +1808,6 @@ button.card.selected {
     font-size: 23px;
   }
   .score small {
-    display: none;
-  }
-  .player .avatar {
     display: none;
   }
   .player-info strong {
@@ -2041,70 +1851,8 @@ button.card.selected {
   .edition {
     display: none;
   }
-  .hero {
-    height: 88svh;
-    min-height: 640px;
-    max-height: 850px;
-    align-items: center;
-  }
-  .hero::before {
-    background-position: 62% center;
-  }
-  .hero::after {
-    background:
-      linear-gradient(90deg, #101a17e8, #101a1770 60%, #101a1720),
-      linear-gradient(0deg, var(--bg), transparent 30%);
-  }
-  .hero-content {
-    margin-left: 25px;
-    width: 90%;
-    padding-top: 120px;
-    padding-bottom: 65px;
-  }
-  .hero .eyebrow {
-    font-size: 8px;
-    letter-spacing: 0.18em;
-    margin-bottom: 23px;
-  }
-  .hero h1 {
-    font-size: 39px;
-    line-height: 1.6;
-    letter-spacing: -0.055em;
-  }
-  .hero-copy {
-    font-size: 11px;
-    max-width: 280px;
-    margin-bottom: 27px;
-  }
-  .hero-meta {
-    gap: 17px;
-    font-size: 9px;
-    margin-top: 30px;
-  }
-  .hero-actions button {
-    font-size: 11px;
-  }
-  .hero-actions .primary {
-    padding: 13px 20px;
-  }
-  .hero-actions .secondary {
-    padding: 13px 18px;
-  }
-  .coordinates {
-    bottom: 55px;
-    right: 15px;
-    font-size: 8px;
-  }
-  .hero-number {
-    right: 22px;
-    top: 90px;
-    font-size: 8px;
-  }
-  .scroll-cue {
-    display: none;
-  }
   .setup {
-    padding: 40px 20px;
+    padding: 26px 20px 48px;
   }
   .section-heading {
     display: block;
@@ -2148,33 +1896,6 @@ button.card.selected {
   .switch {
     top: 20px;
     right: 12px;
-  }
-  .leader-picker {
-    gap: 6px;
-    grid-template-columns: repeat(4, 1fr);
-  }
-  .leader-pick {
-    padding: 8px 3px;
-  }
-  .leader-pick .portrait-mini {
-    height: 53px;
-    width: 53px;
-  }
-  .leader-pick strong {
-    font-size: 9px;
-  }
-  .leader-pick small {
-    font-size: 7px;
-  }
-  .leader-preview {
-    display: block;
-  }
-  .portrait-large {
-    height: 170px;
-    min-height: 0;
-    padding: 8px 20px 0;
-    border: 0;
-    border-bottom: 1px solid var(--line);
   }
   .leader-body {
     padding: 20px;
@@ -2377,21 +2098,6 @@ button.card.selected {
     padding: 6px 8px;
     min-height: 25px;
   }
-  .card .card-art {
-    height: 48px;
-  }
-  .card .card-price {
-    top: 6px;
-    right: 6px;
-    width: 19px;
-    height: 19px;
-    font-size: 12px;
-  }
-  .card .card-source {
-    top: 6px;
-    left: 6px;
-    font-size: 6px;
-  }
   .game-layout {
     gap: 12px;
   }
@@ -2493,9 +2199,6 @@ button.card.selected {
     grid-template-columns: repeat(2, 1fr);
     gap: 9px;
   }
-  .market-grid .card-art {
-    height: 95px;
-  }
   .market-grid .card-title {
     font-size: 11px;
     min-height: 40px;
@@ -2509,7 +2212,7 @@ button.card.selected {
     font-size: 9px;
   }
   .market-grid .card {
-    min-height: 234px;
+    min-height: 185px;
   }
   .market-grid .card-price {
     height: 23px;
@@ -2736,6 +2439,126 @@ button.card.selected {
     font-size: 10px;
   }
   .mobile-bottom button {
+    font-size: 10px;
+  }
+}
+
+.house-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+}
+.leader-label {
+  min-width: 0;
+}
+.leader-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.leader-heading .house-mark {
+  width: 46px;
+  height: 46px;
+}
+.leader-heading .eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.leader-body .english {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.player .house-mark {
+  width: 32px;
+  height: 32px;
+  border: 0;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 9px 0;
+}
+.hand-cards {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+@media (max-width: 800px) {
+  .hero {
+    padding: 32px 30px 26px;
+  }
+  .leader-preview {
+    position: static;
+  }
+  .player .house-mark {
+    display: none;
+  }
+}
+@media (max-width: 540px) {
+  .site-nav {
+    height: 64px;
+    padding: 0 20px;
+  }
+  .hero {
+    padding: 26px 20px;
+  }
+  .hero h1 {
+    font-size: 30px;
+  }
+  .hero-copy {
+    font-size: 12px;
+  }
+  .hero-meta {
+    gap: 14px;
+    font-size: 10px;
+  }
+  .hero-actions button {
+    font-size: 12px;
+  }
+  .section-heading h2 {
+    font-size: 21px;
+    margin-bottom: 4px;
+  }
+  .leader-pick {
+    gap: 9px;
+    padding: 10px;
+  }
+  .leader-pick .house-mark {
+    width: 30px;
+    height: 30px;
+  }
+  .leader-pick strong {
+    font-size: 11px;
+  }
+  .leader-pick small {
+    font-size: 9px;
+  }
+  .leader-body h3 {
+    font-size: 19px;
+  }
+  .ability p {
+    font-size: 12px;
+  }
+  .card .card-title {
+    font-size: 11px;
+    padding-top: 9px;
+  }
+  .market-grid .card-price {
+    width: 23px;
+    height: 23px;
+    font-size: 14px;
+  }
+  .market-grid .card-source {
     font-size: 10px;
   }
 }
